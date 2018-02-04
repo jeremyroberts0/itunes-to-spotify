@@ -1,0 +1,9 @@
+version: "2"
+services:
+  itunes-to-spotify:
+    build:
+      context: .
+    env_file:
+      - ./.env
+    ports:
+      - "8081:8081"

@@ -1,0 +1,9 @@
+# IDE
+.vscode
+
+# Sensitive env vars, never commit
+.env
+
+# Common outputs from go build
+itunes-to-spotfy
+app
