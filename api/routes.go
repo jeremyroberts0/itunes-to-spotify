@@ -16,6 +16,7 @@ func GetRouter() *gin.Engine {
 
 	Auth(router)
 	MatchItunesPlaylistToSpotify(router)
+	ApplyStatsRoutes(router)
 
 	return router
 }

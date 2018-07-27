@@ -77,7 +77,7 @@ func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 		// It will wait the ms specified in the Retry-After header, as per the Spotify REST API Guidelines
 		client.AutoRetry = true
 
-		songs := itunes.ParsePaylist(c.Request.Body)
+		songs := itunes.ParsePlaylist(c.Request.Body)
 
 		trackIds := []spotify.ID{}
 		matchErrs := []matchErr{}

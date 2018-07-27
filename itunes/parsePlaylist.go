@@ -10,7 +10,7 @@ import (
 	"github.com/jeremyroberts0/itunes-to-spotify/types"
 )
 
-func ParsePaylist(target io.Reader) (songs []types.ItunesSong) {
+func ParsePlaylist(target io.Reader) (songs []types.ItunesSong) {
 	reader := csv.NewReader(target)
 	reader.LazyQuotes = true
 	reader.Comma = '\t'
