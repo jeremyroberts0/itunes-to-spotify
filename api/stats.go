@@ -88,9 +88,15 @@ func GetPlaylistStats(c *gin.Context) {
 		return stats.Songs[i].SongCount > stats.Songs[j].SongCount
 	})
 
-	stats.Artists = stats.Artists[:10]
-	stats.Albums = stats.Albums[:10]
-	stats.Songs = stats.Songs[:10]
+	if len(stats.Artists) > 10 {
+		stats.Artists = stats.Artists[:10]
+	}
+	if len(stats.Albums) > 10 {
+		stats.Albums = stats.Albums[:10]
+	}
+	if len(stats.Songs) > 10 {
+		stats.Songs = stats.Songs[:10]
+	}
 
 	c.IndentedJSON(200, stats)
 }
