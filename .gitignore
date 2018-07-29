@@ -5,5 +5,5 @@
 .env
 
 # Common outputs from go build
-itunes-to-spotfy
+itunes-to-spotify
 app
