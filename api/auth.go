@@ -8,7 +8,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zmb3/spotify"
+	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
 const (
@@ -17,15 +17,15 @@ const (
 	cookieName  = "spotify-token"
 )
 
-var auth spotify.Authenticator
+var authenticator *spotifyauth.Authenticator
 
 func init() {
-	auth = spotify.NewAuthenticator(
-		redirectURI,
-		spotify.ScopeUserReadPrivate,
-		spotify.ScopePlaylistModifyPrivate,
+	authenticator = spotifyauth.New(
+		spotifyauth.WithRedirectURL(redirectURI),
+		spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPrivate),
+		spotifyauth.WithClientID(os.Getenv("SPOTIFY_CLIENT_ID")),
+		spotifyauth.WithClientSecret(os.Getenv("SPOTIFY_CLIENT_SECRET")),
 	)
-	auth.SetAuthInfo(os.Getenv("SPOTIFY_CLIENT_ID"), os.Getenv("SPOTIFY_CLIENT_SECRET"))
 }
 
 func getCookieToken(c *gin.Context) (token *oauth2.Token, err error) {
@@ -40,16 +40,16 @@ func getCookieToken(c *gin.Context) (token *oauth2.Token, err error) {
 
 // Auth sets up auth routes
 func Auth(router *gin.Engine) {
-	url := auth.AuthURL(state)
+	url := authenticator.AuthURL(state)
 
-	router.GET("/authorize", func(context *gin.Context) {
-		context.Redirect(http.StatusTemporaryRedirect, url)
+	router.GET("/authorize", func(c *gin.Context) {
+		c.Redirect(http.StatusTemporaryRedirect, url)
 	})
 
-	router.GET("/authorized", func(context *gin.Context) {
-		token, err := auth.Token(state, context.Request)
+	router.GET("/authorized", func(c *gin.Context) {
+		token, err := authenticator.Token(c.Request.Context(), state, c.Request)
 		if err != nil {
-			context.IndentedJSON(500, map[string]string{
+			c.IndentedJSON(500, map[string]string{
 				"message": "Couldn't get token",
 				"error":   err.Error(),
 			})
@@ -58,13 +58,13 @@ func Auth(router *gin.Engine) {
 
 		cookieValue, err := json.Marshal(token)
 		if err != nil {
-			context.IndentedJSON(500, map[string]string{
+			c.IndentedJSON(500, map[string]string{
 				"message": "Error creating auth cookie",
 				"error":   err.Error(),
 			})
 			return
 		}
-		context.SetCookie(
+		c.SetCookie(
 			cookieName,
 			string(cookieValue),
 			60*60*1, // 1 hour
@@ -73,7 +73,7 @@ func Auth(router *gin.Engine) {
 			false,
 			true,
 		)
-		context.IndentedJSON(http.StatusOK, map[string]string{
+		c.IndentedJSON(http.StatusOK, map[string]string{
 			"message": "Authentication successful",
 		})
 	})
