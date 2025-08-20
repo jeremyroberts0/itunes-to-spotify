@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/gin-gonic/gin v1.10.1
-	github.com/jeremyroberts0/pool v0.0.1
+	github.com/jeremyroberts0/pool v0.0.2-0.20180204221712-84a34ed338b1
 	github.com/zmb3/spotify v1.3.0
 	golang.org/x/oauth2 v0.30.0
 )

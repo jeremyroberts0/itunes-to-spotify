@@ -130,7 +130,7 @@ func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 			return
 		}
 		userID := user.ID
-		playlist, err := client.CreatePlaylistForUser(userID, playlistName, false)
+		playlist, err := client.CreatePlaylistForUser(userID, playlistName, playlistName, false)
 
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, createError("Error creating playlist", err))
@@ -148,7 +148,7 @@ func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 			}
 		}
 		for _, trackIDGroup := range trackIDGroups {
-			_, err = client.AddTracksToPlaylist(userID, playlist.ID, trackIDGroup...)
+			_, err = client.AddTracksToPlaylist(playlist.ID, trackIDGroup...)
 			if err != nil {
 				c.IndentedJSON(
 					http.StatusInternalServerError,
