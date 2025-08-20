@@ -1,19 +1,28 @@
-FROM golang:1.9.2
+FROM golang:1.21-alpine AS builder
 
-COPY ./ /go/src/github.com/jeremyroberts0/itunes-to-spotify
-WORKDIR /go/src/github.com/jeremyroberts0/itunes-to-spotify
+WORKDIR /app
 
-RUN go get ./
+# Copy go mod files first for better layer caching
+COPY go.mod go.sum ./
 
-# Statically link so we can run the binary anywhere
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o app .
+# Download dependencies
+RUN go mod download
 
-# Multi-stage build, 2nd container, running app is just alpine; much small, such secure, wow.
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -o app .
+
+# Multi-stage build, 2nd container, running app is just alpine; much smaller, such secure, wow.
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=0 /go/src/github.com/jeremyroberts0/itunes-to-spotify/app .
 
-EXPOSE 8081:8081
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+COPY --from=builder /app/app .
+
+EXPOSE 8081
 
 CMD ["./app"]

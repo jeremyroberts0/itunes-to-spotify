@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 	"github.com/jeremyroberts0/itunes-to-spotify/itunes"
 	"github.com/jeremyroberts0/itunes-to-spotify/types"
 	"github.com/jeremyroberts0/pool"
-	"github.com/zmb3/spotify"
+	"github.com/zmb3/spotify/v2"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,11 +29,13 @@ type matchCompletedResponse struct {
 	MatchSuccessRate float32    `json:"match_success_rate,omitempty"`
 }
 
-func makeSearchJob(client spotify.Client, song types.ItunesSong, index, total int, idChan chan spotify.ID, matchErrChan chan matchErr) func() error {
+func makeSearchJob(client *spotify.Client, song types.ItunesSong, index, total int, idChan chan spotify.ID, matchErrChan chan matchErr) func() error {
 	return func() error {
 		fmt.Printf("Searching for song %v of %v\n", index, total)
 
+		ctx := context.Background()
 		results, err := client.Search(
+			ctx,
 			fmt.Sprintf("track:%v artist:%v", song.Name, song.Artist),
 			spotify.SearchTypeTrack,
 		)
@@ -58,6 +61,7 @@ func makeSearchJob(client spotify.Client, song types.ItunesSong, index, total in
 
 func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 	router.POST("/itunes-to-spotify", func(c *gin.Context) {
+		ctx := c.Request.Context()
 		playlistName := c.Query("name")
 		token, err := getCookieToken(c)
 
@@ -71,11 +75,8 @@ func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 			return
 		}
 
-		client := auth.NewClient(token)
-
-		// AutoRetry automatically tried requests again when they fail due to rate limiting
-		// It will wait the ms specified in the Retry-After header, as per the Spotify REST API Guidelines
-		client.AutoRetry = true
+		httpClient := authenticator.Client(ctx, token)
+		client := spotify.New(httpClient, spotify.WithRetry(true))
 
 		songs := itunes.ParsePlaylist(c.Request.Body)
 
@@ -124,13 +125,13 @@ func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 		// Wait a second so Spotify's rate limiting chills out
 		time.Sleep(time.Second)
 
-		user, err := client.CurrentUser()
+		user, err := client.CurrentUser(ctx)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, createError("Error creating playlist", err))
 			return
 		}
-		userID := user.ID
-		playlist, err := client.CreatePlaylistForUser(userID, playlistName, playlistName, false)
+		userID := string(user.ID)
+		playlist, err := client.CreatePlaylistForUser(ctx, userID, playlistName, playlistName, false, false)
 
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, createError("Error creating playlist", err))
@@ -148,7 +149,7 @@ func MatchItunesPlaylistToSpotify(router *gin.Engine) {
 			}
 		}
 		for _, trackIDGroup := range trackIDGroups {
-			_, err = client.AddTracksToPlaylist(playlist.ID, trackIDGroup...)
+			_, err = client.AddTracksToPlaylist(ctx, playlist.ID, trackIDGroup...)
 			if err != nil {
 				c.IndentedJSON(
 					http.StatusInternalServerError,
